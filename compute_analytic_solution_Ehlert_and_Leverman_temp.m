@@ -2,10 +2,11 @@ clear all
 % Ehlert and Leverman 2014;
 % Mechanism for potential strengthening of Atlantic overturning prior to collapse
 % temperature evolution equations
+% for git hub
 tempevl=true;
 % Table 1
 C1 = 0.1; %nondimensional coeff for MOC transport
-m3s2Sv = 1; %1e-6; 
+m3s2Sv = 1e-6; 
 grav = 9.81; %m2/s
 
 H = 4000; %in m ; Average depth of Atlantic Ocean basin
@@ -17,7 +18,7 @@ LS = 3.34*1e6; %in m ; Meridional extend of the southern box
 rho0 = 1027; %kgm-3
 S0 = 35; % psu ; Average salinity of Atlantic Ocean
 LyN = 1.5*1e6; % Meridional extend of the northen outcropping
-A_GM = 1000; %m2/s GM thickness diffusivity
+kappa_GM = 1000; %m2/s GM thickness diffusivity
 kappa = 4e-5; %m2/s Background vertical diffusivity
 alpha_T = 2.1e-4; % 1/C thermal coefficient
 alphaT = alpha_T*rho0;
@@ -29,6 +30,8 @@ fbeta = 2e-11; % 1/s
 tau = 0.1; %Nm-2 = kgm-1s-2
 Cgm = (1-exp(-tau/0.02)); % it can be 1 for simplivity
 FN = 0.1*1e6; % Sv ; Northern meridional freshwater transport
+FNd = 0;
+FNFW = 0; %initial freshwater into nordic seas
 FS = 0.1*1e6; %Sv ; Southern meridional freshwater transport
 TN = 5;
 TS = 7;
@@ -56,8 +59,13 @@ yearinsec = 360*86400; % 1 year in sec
 deltat = 15*86400; %30 days to sec
 time = 0;
 iind = 1;
+
+if 1
+  load initial
+end
+
 % time step
-for ind=1:24000
+for ind=1:24000    
     delta_rho = rho0*(beta_S*(SN-SU)-alpha_T*(TN-TU));
     delta_rho_SO = rho0*(beta_S*(SS-SU)-alpha_T*(TS-TU));
     delta_rho_D = rho0*(beta_S*(SN-SD)-alpha_T*(TN-TD));
@@ -68,7 +76,7 @@ for ind=1:24000
     % phi_Ek
     phi_Ek = (B*tau/(f0*rho0));
     % phi_GM
-    phi_GM = Cgm*(B*A_GM*(delta_rho_SO/rho0)*H_pyc/H); 
+    phi_GM = Cgm*(B*kappa_GM*(delta_rho_SO/rho0)*H_pyc/H); 
     % new pycnocline depth
     H_pyc_new = H_pyc + (deltat/(B*LU))*(phi_Up+phi_Ek-phi_GM-phi_N);
     % Volume*Salt terms
@@ -123,8 +131,13 @@ for ind=1:24000
        TD = VDTD/VD;
     end
     % time series
-    time=time+deltat;
+    time=time+deltat;        
     if(mod(time,yearinsec)==0)
+      if(mod(iind,100)==0)
+        FNd=FNFW;
+      end
+      FNFW=FNd+(0.1*1e6)*mod(iind,100)/99;
+      Fwater(iind)=FNFW;
       HUtime(iind) = H_pyc;
       TrN(iind) = phi_N;
       TrW(iind) = phi_Ek;
@@ -144,18 +157,27 @@ for ind=1:24000
     end
 end   
 if (tempevl)
-	subplot(1,2,1)
+  figure('Position', [100, 100, 1000, 400]);
+	subplot(1,3,1)
 	plot(SUtime,'k','linewidth',2)
 	hold on
 	plot(SDtime,'b','linewidth',2)
 	plot(SNtime,'r','linewidth',2)
 	plot(SStime,'g','linewidth',2)
-	subplot(1,2,2)
-	plot(TUtime,'k','linewidth',2)
-	hold on
-	plot(TDtime,'b','linewidth',2)
-	plot(TNtime,'r','linewidth',2)
-	plot(TStime,'g','linewidth',2)
+	subplot(1,3,2)
+  plot(TUtime,'k','linewidth',2)
+  hold on
+  plot(TDtime,'b','linewidth',2)
+  plot(TNtime,'r','linewidth',2)
+  plot(TStime,'g','linewidth',2)
+  legend('Up','Deep','North','South','location','best')
+  subplot(1,3,3)
+  plot(TrU*m3s2Sv,'k','linewidth',2)
+  hold on
+  plot(TrW*m3s2Sv,'b','linewidth',2)
+  plot(TrN*m3s2Sv,'r','linewidth',2)
+  plot(TrE*m3s2Sv,'g','linewidth',2)
+  legend('Up','Wind','North','GM','location','northeast')
 else
 	plot(SUtime,'k','linewidth',2)
 	hold on
@@ -163,3 +185,4 @@ else
 	plot(SNtime,'r','linewidth',2)
 	plot(SStime,'g','linewidth',2)
 end
+%save('initial.mat','SN','SU','SD','SS','TN','TU','TD','TS','H_pyc','VU','VN','VS','VD')
