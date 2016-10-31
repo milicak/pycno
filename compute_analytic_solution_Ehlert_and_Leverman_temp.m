@@ -93,7 +93,7 @@ for ind=1:24000
     end
     % New volume salt terms
     VUSUnew = VUSU + deltat*(phi_Up*SD+phi_Ek*SS-SU*(phi_N+phi_GM)+S0*(FN+FS));
-    VNSNnew = VNSN + deltat*(phi_N*(SU-SN)-S0*FN);
+    VNSNnew = VNSN + deltat*(phi_N*(SU-SN)-S0*(FN+FNFW));
     VSSSnew = VSSS + deltat*(phi_Ek*(SD-SS)+phi_GM*(SU-SS)-S0*FS);
     VDSDnew = VDSD + deltat*(phi_N*SN+phi_GM*SS-SD*(phi_Up+phi_Ek));
     if(tempevl)
@@ -136,7 +136,10 @@ for ind=1:24000
       if(mod(iind,100)==0)
         FNd=FNFW;
       end
-      FNFW=FNd+(0.1*1e6)*mod(iind,100)/99;
+      FNFW=FNd+(1*1e6)*mod(iind,100)/99;
+      if iind>200
+        FNFW = 2e6;
+      end
       Fwater(iind)=FNFW;
       HUtime(iind) = H_pyc;
       TrN(iind) = phi_N;
