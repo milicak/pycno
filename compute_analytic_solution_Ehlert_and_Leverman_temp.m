@@ -100,6 +100,7 @@ for ind=1:24000*1
     phi_Ek = (Bwidth*tau/(f0*rho0));
     % phi_GM
     %phi_GM1 = Cgm*(Bwidth*kappa_GM*(delta_rho_SO/rho0)*H_pyc/Htopo); 
+    % The new version
     phi_GM1 = 0.01*Bwidth*(grav*delta_rho_SO/rho0)*H_pyc*H_pyc/(f0*LS);
     
 
