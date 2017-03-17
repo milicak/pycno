@@ -5,17 +5,17 @@ clear all
 % for git hub
 tempevl = true;
 FWforce = false;
-AADW = 0; % turn on AADW mode
+AADW = 1; % turn on AADW mode
 
 %diffusivity = 'N2 dependent'; % 'constant diff' ; 'constant energy' ; 'N2 dependent'
-%diffusivity = 'constant diff'; % 'constant diff' ; 'constant energy' ; 'N2 dependent'
-diffusivity = 'constant energy'; % 'constant diff' ; 'constant energy' ; 'N2 dependent'
+diffusivity = 'constant diff'; % 'constant diff' ; 'constant energy' ; 'N2 dependent'
+%diffusivity = 'constant energy'; % 'constant diff' ; 'constant energy' ; 'N2 dependent'
 % Table 1
 C1 = 0.1; %nondimensional coeff for MOC transport
 m3s2Sv = 1e-6; 
 grav = 9.81; %m2/s
 
-Htopo = 4000; %in m ; Average depth of Atlantic Ocean basin
+Htopo = 5000; %in m ; Average depth of Atlantic Ocean basin
 Bwidth = 1e7; % in m ; Average width of Atlantic Ocean
 LN = 3.34*1e6; %in m ; Meridional extend of the northen box
 LU = 8.9*1e6;  %in m ; Meridional extend of the tropical box
@@ -38,11 +38,11 @@ N0 = 8e-3; % 1/s used in N2 dependent diffusivity
 a0 = 1e-5; % m2/s constant diffusivity used in N2 dependent diffusivity
 tau = 0.085; %Nm-2 = kgm-1s-2
 Cgm = (1-exp(-tau/0.02)); % it can be 1 for simplivity
-FN = 0.1*1e6; % Sv ; Northern meridional freshwater transport
+FN = 0.2*1e6; % Sv ; Northern meridional freshwater transport
 FNd = 0;
 FNFW = 0; %initial freshwater into nordic seas
 FNFW_cap = 2e6; % cap of freshwater
-FS = 0.1*1e6; %Sv ; Southern meridional freshwater transport
+FS = 0.2*1e6; %Sv ; Southern meridional freshwater transport
 gammau = 1/(5*365*86400); % 5 years
 gamman = 1/(5*365*86400); % 5 years
 gammas = 1/(5*365*86400); % 5 years
@@ -56,37 +56,41 @@ SU=35; % Upper cell
 SS=35; % Southern cell
 SD=35; % Deep cell
 TN = 5;
-TS = 7;
+TS = 0;
 TU = 12.5; %12.5;
-TD = 2; 
+TD = 3; 
 
 H_pyc=500; % initial conditions
-VU = LU*Bwidth*H_pyc;
-VN = LN*Bwidth*Htopo;
-VS = LS*Bwidth*Htopo;
-VD = LU*Bwidth*(Htopo-H_pyc);
-
 % initial conditions 
 H_deep = Htopo - H_pyc;
 if AADW
-    SA = 34; % Antarctic DW cell
-    TA = 1;
-    H_AADW = 1000.0;
-    H_deep = Htopo - H_pyc - H_AADW;
+  SA = 35; % Antarctic DW cell
+  TA = 0;
+  H_AADW = 1000.0;
+  H_deep = Htopo - H_pyc - H_AADW;
+  gammaa = 1/(5*365*86400); % 25 years
+  TArelax = 2;
+  VA = LU*Bwidth*H_AADW;
 end
+VU = LU*Bwidth*H_pyc;
+VN = LN*Bwidth*Htopo;
+VS = LS*Bwidth*Htopo;
+VD = LU*Bwidth*H_deep;
 	
 yearinsec = 360*86400; % 1 year in sec
 deltat = 15*86400; %30 days to sec
 time = 0;
 iind = 1;
+yearlength = 1200; 
 %return
 
 if 0
   load initial
 end
 
+%return
 % time step
-for ind=1:24000*1
+for ind=1:(yearlength*yearinsec/deltat)
     delta_rho = rho0*(beta_S*(SN-SU)-alpha_T*(TN-TU));
     delta_rho_SO = rho0*(beta_S*(SS-SU)-alpha_T*(TS-TU));
     delta_rho_D = rho0*(beta_S*(SN-SD)-alpha_T*(TN-TD));
@@ -123,32 +127,40 @@ for ind=1:24000*1
     % phi_Ek
     phi_Ek = (Bwidth*tau/(f0*rho0));
     % phi_GM
-    %phi_GM1 = Cgm*(Bwidth*kappa_GM*(delta_rho_SO/rho0)*H_pyc/Htopo); 
+    phi_GM1 = Cgm*(Bwidth*kappa_GM*(delta_rho_SO/rho0)*H_pyc/Htopo); 
     % The new version
-    phi_GM1 = 0.01*Bwidth*(grav*delta_rho_SO/rho0)*H_pyc*H_pyc/(f0*LS);
+    %phi_GM1 = 0.01*Bwidth*(grav*delta_rho_SO/rho0)*H_pyc*H_pyc/(f0*LS);
 
     if AADW
-      phi_GM2 = 0.01*Bwidth*(grav*delta_rho_SO2/rho0)*H_deep*H_deep/(f0*LS);
+      %phi_GM2 = 0.01*Bwidth*(grav*delta_rho_SO2/rho0)*H_deep*H_deep/(f0*LS);
+      %phi_GM2 = 3*Cgm*(Bwidth*kappa_GM*(delta_rho_SO2/rho0)*H_deep/Htopo); 
       % phi_AADW (into the bottom layer AADW)
-      phi_AADW = (phi_GM1+phi_GM2)-phi_Ek;
+      %phi_AADW = (phi_GM1+phi_GM2)-phi_Ek;
+
       % phi Internal Tides Upwelling
       %phi_ITU = (LU*Bwidth*kappa_v2/H_AADW);
       phi_ITU = (LU*Bwidth*kappa_v2/H_deep);
       %phi_ITU = max(0,(LU*Bwidth*kappa_v2/H_deep));
+      %
+      phi_AADW = phi_ITU;
+      phi_GM2 = phi_AADW+phi_Ek-phi_GM1;
+      
       if(isinf(phi_ITU)==1); 
           display('phi_ITU')
           phi_ITU = 0.0; 
       end
     end
+    %return
 
     if AADW
       % new AADW depth
-      %H_AADW_new = H_AADW; %max(0,H_AADW + (deltat/(Bwidth*LU))*(phi_GM1+phi_GM2-phi_Ek-phi_AADW));
-      H_AADW_new = H_AADW + (deltat/(Bwidth*LU))*(phi_AADW-phi_ITU);
+      %H_AADW_new = max(0,H_AADW + (deltat/(Bwidth*LU))*(phi_GM1+phi_GM2-phi_Ek-phi_AADW));
+      H_AADW_new = max(200.0,H_AADW + (deltat/(Bwidth*LU))*(phi_AADW-phi_ITU));
       if(H_AADW_new < 0)
-        display('Mehmet AADW depleted')
+        display('Mehmet AADW depleted2')
         H_AADW_new = 0.0;
         phi_ITU = 0.0;
+        phi_AADW = 0.0;
       end
     end
 
@@ -228,7 +240,7 @@ for ind=1:24000*1
     VS = LS*Bwidth*Htopo;
     VD = LU*Bwidth*H_deep;
     if AADW
-      VA = LU*Bwdth*H_AADW;
+      VA = LU*Bwidth*H_AADW;
     end
     SU=VUSU/VU;
     SN=VNSN/VN;
@@ -270,6 +282,11 @@ for ind=1:24000*1
       SNtime(iind) = SN;
       SStime(iind) = SS;
       SDtime(iind) = SD;
+      if AADW
+        SAtime(iind) = SA;
+        TrA(iind) = phi_AADW;
+        TrI(iind) = phi_ITU;
+      end
       drho(iind) = delta_rho;
       drhoD(iind) = delta_rho_D;
       drhoSO(iind) = delta_rho_SO;
@@ -278,6 +295,9 @@ for ind=1:24000*1
         TNtime(iind) = TN;
         TStime(iind) = TS;
         TDtime(iind) = TD;
+        if AADW
+          TAtime(iind) = TA;
+        end
       end
       iind = iind+1;
     end
