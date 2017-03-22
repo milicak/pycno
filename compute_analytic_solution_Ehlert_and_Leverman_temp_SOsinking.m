@@ -4,7 +4,7 @@ clear all
 % temperature evolution equations
 % for git hub
 tempevl = true;
-FWforce = false;
+FWforce = true;
 AADW = 1; % turn on AADW mode
 
 %diffusivity = 'N2 dependent'; % 'constant diff' ; 'constant energy' ; 'N2 dependent'
@@ -31,32 +31,35 @@ betaS = beta_S*rho0;
 f0 = 7.5e-5; %1/s
 fbeta = 2e-11; % 1/s
 
-kappa_GM = 1000; %m2/s GM thickness diffusivity
-kappa_cnst = 4.2e-5; %m2/s Background vertical diffusivity
-epsilon = 1e-3; % kg s-3 constant dissipation energy in the ocean per area
+kappa_GM = 600; %m2/s GM thickness diffusivity
+kappa_cnst = 4.2e-5; %4.2e-5; %m2/s Background vertical diffusivity
+epsilon = 1e-3; %1e-3; % kg s-3 constant dissipation energy in the ocean per area
 N0 = 8e-3; % 1/s used in N2 dependent diffusivity 
 a0 = 1e-5; % m2/s constant diffusivity used in N2 dependent diffusivity
-tau = 0.085; %Nm-2 = kgm-1s-2
+tau = 0.1; %0.085; %Nm-2 = kgm-1s-2
 Cgm = (1-exp(-tau/0.02)); % it can be 1 for simplivity
 FN = 0.2*1e6; % Sv ; Northern meridional freshwater transport
 FNd = 0;
 FNFW = 0; %initial freshwater into nordic seas
-FNFW_cap = 2e6; % cap of freshwater
+FNFW_cap = 2*1e6; % cap of freshwater [m3/s]
 FS = 0.2*1e6; %Sv ; Southern meridional freshwater transport
 gammau = 1/(5*365*86400); % 5 years
 gamman = 1/(5*365*86400); % 5 years
 gammas = 1/(5*365*86400); % 5 years
-TUrelax = 20;
-TNrelax = 3;
-TSrelax = 7;
+TUrelax = 20.5;
+TNrelax = 5;
+TSrelax = 0.5;
+%TUrelax = 20;
+%TNrelax = 3;
+%TSrelax = 0;
 
 % initial conditions 
 SN=35; % Northern cell
 SU=35; % Upper cell
 SS=35; % Southern cell
 SD=35; % Deep cell
-TN = 5;
-TS = 0;
+TN = 7; %5;
+TS = 1; %0;
 TU = 12.5; %12.5;
 TD = 3; 
 
@@ -64,8 +67,8 @@ H_pyc=500; % initial conditions
 % initial conditions 
 H_deep = Htopo - H_pyc;
 if AADW
-  SA = 35; % Antarctic DW cell
-  TA = 0;
+  %SA = 35; % Antarctic DW cell
+  %TA = 0;
   H_AADW = 1000.0;
   H_deep = Htopo - H_pyc - H_AADW;
   gammaa = 1/(5*365*86400); % 25 years
@@ -75,13 +78,17 @@ end
 VU = LU*Bwidth*H_pyc;
 VN = LN*Bwidth*Htopo;
 VS = LS*Bwidth*Htopo;
+if AADW
+  VS = VS + VA;
+end
+
 VD = LU*Bwidth*H_deep;
 	
 yearinsec = 360*86400; % 1 year in sec
 deltat = 15*86400; %30 days to sec
 time = 0;
 iind = 1;
-yearlength = 1200; 
+yearlength = 3000; 
 %return
 
 if 0
@@ -96,7 +103,7 @@ for ind=1:(yearlength*yearinsec/deltat)
     delta_rho_D = rho0*(beta_S*(SN-SD)-alpha_T*(TN-TD));
     if AADW
       delta_rho_SO2 = rho0*(beta_S*(SS-SD)-alpha_T*(TS-TD));
-      delta_rho_AADW = rho0*(beta_S*(SA-SD)-alpha_T*(TA-TD));
+      %delta_rho_AADW = rho0*(beta_S*(SA-SD)-alpha_T*(TA-TD));
     end
     %if delta_rho_D<0
     %  display('MI')
@@ -105,7 +112,9 @@ for ind=1:(yearlength*yearinsec/deltat)
     case 'constant diff'
       kappa_v = kappa_cnst;  
       if AADW
-        kappa_v2 = epsilon/(grav*delta_rho_AADW);
+        %kappa_v2 = 10*kappa_cnst;  
+        kappa_v2 = epsilon/(grav*delta_rho_SO2);
+        %kappa_v2 = epsilon/(grav*delta_rho_AADW);
       end
     case 'N2 dependent'
       kappa_v = a0*(sqrt(grav*delta_rho/(rho0*H_pyc))/N0)^(-1);
@@ -122,17 +131,18 @@ for ind=1:(yearlength*yearinsec/deltat)
       phi_N = 0.0;
       return
     end
-    % phi_Up
+    % phi_Upfalsefalse
     phi_Up = (LU*Bwidth*kappa_v/H_pyc);
     % phi_Ek
     phi_Ek = (Bwidth*tau/(f0*rho0));
     % phi_GM
-    phi_GM1 = Cgm*(Bwidth*kappa_GM*(delta_rho_SO/rho0)*H_pyc/Htopo); 
+    %phi_GM1 = Cgm*(Bwidth*kappa_GM*(delta_rho_SO/rho0)*H_pyc/Htopo); 
     % The new version
-    %phi_GM1 = 0.01*Bwidth*(grav*delta_rho_SO/rho0)*H_pyc*H_pyc/(f0*LS);
+    phi_GM1 = 0.01*Bwidth*(grav*delta_rho_SO/rho0)*H_pyc*H_pyc/(f0*LS);
 
     if AADW
-      %phi_GM2 = 0.01*Bwidth*(grav*delta_rho_SO2/rho0)*H_deep*H_deep/(f0*LS);
+      phi_GM2 = 0.01*Bwidth*(grav*delta_rho_SO2/rho0)*H_deep*H_deep/(f0*LS);
+      %phi_GM2 = 3*Cgm*(Bwidth*kappa_GM*(delta_rho_SO2/rho0)*H_deep/Htopo); 
       %phi_GM2 = 3*Cgm*(Bwidth*kappa_GM*(delta_rho_SO2/rho0)*H_deep/Htopo); 
       % phi_AADW (into the bottom layer AADW)
       %phi_AADW = (phi_GM1+phi_GM2)-phi_Ek;
@@ -142,8 +152,8 @@ for ind=1:(yearlength*yearinsec/deltat)
       phi_ITU = (LU*Bwidth*kappa_v2/H_deep);
       %phi_ITU = max(0,(LU*Bwidth*kappa_v2/H_deep));
       %
-      phi_AADW = phi_ITU;
-      phi_GM2 = phi_AADW+phi_Ek-phi_GM1;
+      %phi_AADW = phi_ITU;
+      %phi_GM2 = phi_ITU+phi_Ek-phi_GM1;
       
       if(isinf(phi_ITU)==1); 
           display('phi_ITU')
@@ -151,17 +161,27 @@ for ind=1:(yearlength*yearinsec/deltat)
       end
     end
     %return
+    % new pycnocline depth
+    H_pyc_new = H_pyc + (deltat/(Bwidth*LU))*(phi_Up+phi_Ek-phi_GM1-phi_N);
+    %update values
+    H_pyc = H_pyc_new;
 
     if AADW
       % new AADW depth
       %H_AADW_new = max(0,H_AADW + (deltat/(Bwidth*LU))*(phi_GM1+phi_GM2-phi_Ek-phi_AADW));
-      H_AADW_new = max(200.0,H_AADW + (deltat/(Bwidth*LU))*(phi_AADW-phi_ITU));
-      if(H_AADW_new < 0)
+      %H_AADW_new = max(200.0,H_AADW + (deltat/(Bwidth*LU))*(phi_AADW-phi_ITU));
+      H_deep_new = H_deep + (deltat/(Bwidth*LU))*(-phi_GM2+phi_ITU+phi_N-phi_Up);
+      H_AADW = Htopo - H_pyc_new - H_deep_new;
+      %update values
+      H_deep = H_deep_new;
+      if(H_AADW < 0)
         display('Mehmet AADW depleted2')
         H_AADW_new = 0.0;
         phi_ITU = 0.0;
         phi_AADW = 0.0;
       end
+    else
+      H_deep = Htopo - H_pyc_new;
     end
 
     % Volume*Salt terms
@@ -169,26 +189,27 @@ for ind=1:(yearlength*yearinsec/deltat)
     VNSN = VN*SN;
     VSSS = VS*SS;
     VDSD = VD*SD;
-    if AADW
-      VASA = VA*SA;
-    end
+    %if AADW
+    %  VASA = VA*SA;
+    %end
     if(tempevl)
       % Volume*Temp terms
       VUTU = VU*TU;
       VNTN = VN*TN;
       VSTS = VS*TS;
       VDTD = VD*TD;
-      if AADW
-        VATA = VA*TA;
-      end
+      %if AADW
+      %  VATA = VA*TA;
+      %end
     end
     % New volume salt terms
     VUSUnew = VUSU + deltat*(phi_Up*SD+phi_Ek*SS-SU*(phi_N+phi_GM1)+S0*(FN+FS));
     VNSNnew = VNSN + deltat*(phi_N*(SU-SN)-S0*(FN+FNFW));
     if AADW
-      VSSSnew = VSSS + deltat*(phi_Ek*(-SS)+phi_GM1*(SU)+phi_GM2*(SD)-phi_AADW*SS-S0*FS);
-      VDSDnew = VDSD + deltat*(phi_N*SN-phi_GM2*SD-SD*(phi_Up)+phi_ITU*SA);
-      VASAnew = VASA + deltat*(phi_AADW*SS-phi_ITU*SA);
+      VSSSnew = VSSS + deltat*(phi_Ek*(-SS)+phi_GM1*(SU)+phi_GM2*(SD)-phi_ITU*SS-S0*FS);
+      VDSDnew = VDSD + deltat*(phi_N*SN-phi_GM2*SD-SD*(phi_Up)+phi_ITU*SS);
+      %VDSDnew = VDSD + deltat*(phi_N*SN-phi_GM2*SD-SD*(phi_Up)+phi_ITU*SA);
+      %VASAnew = VASA + deltat*(phi_AADW*SS-phi_ITU*SA);
     else
       VSSSnew = VSSS + deltat*(phi_Ek*(SD-SS)+phi_GM1*(SU-SS)-S0*FS);
       VDSDnew = VDSD + deltat*(phi_N*SN+phi_GM1*SS-SD*(phi_Up+phi_Ek));
@@ -198,65 +219,55 @@ for ind=1:(yearlength*yearinsec/deltat)
       VUTUnew = VUTU + deltat*(phi_Up*TD+phi_Ek*TS-TU*(phi_N+phi_GM1)+gammau*VU*(TUrelax-TU));
       VNTNnew = VNTN + deltat*(phi_N*(TU-TN)+gamman*VN*(TNrelax-TN));
       if AADW
-        VSTSnew = VSTS + deltat*(phi_Ek*(-TS)+phi_GM1*(TU)+phi_GM2*(TD)-phi_AADW*TS+gammas*VS*(TSrelax-TS));
-        VDTDnew = VDTD + deltat*(phi_N*TN-phi_GM2*TD-TD*(phi_Up)+phi_ITU*TA);
-        VATAnew = VATA + deltat*(phi_AADW*TS-phi_ITU*TA+gammaa*VA*(TArelax-TA));
+        VSTSnew = VSTS + deltat*(phi_Ek*(-TS)+phi_GM1*(TU)+phi_GM2*(TD)-phi_ITU*TS+gammas*VS*(TSrelax-TS));
+        VDTDnew = VDTD + deltat*(phi_N*TN-phi_GM2*TD-TD*(phi_Up)+phi_ITU*TS);
+        %VDTDnew = VDTD + deltat*(phi_N*TN-phi_GM2*TD-TD*(phi_Up)+phi_ITU*TA);
+        %VATAnew = VATA + deltat*(phi_AADW*TS-phi_ITU*TA+gammaa*VA*(TArelax-TA));
       else
         VSTSnew = VSTS + deltat*(phi_Ek*(TD-TS)+phi_GM1*(TU-TS)+gammas*VS*(TSrelax-TS));
         VDTDnew = VDTD + deltat*(phi_N*TN+phi_GM1*TS-TD*(phi_Up+phi_Ek));
       end
     end
 
-    % new pycnocline depth
-    H_pyc_new = H_pyc + (deltat/(Bwidth*LU))*(phi_Up+phi_Ek-phi_GM1-phi_N);
-    %update values
-    H_pyc = H_pyc_new;
-    if AADW
-      % new H_deep
-      H_AADW = H_AADW_new;
-      H_deep = Htopo - H_pyc_new - H_AADW_new;
-    else
-      H_deep = Htopo - H_pyc_new;
-    end
     VUSU = VUSUnew;
     VNSN = VNSNnew;    
     VSSS = VSSSnew;    
     VDSD = VDSDnew;
-    VDSD = VDSDnew;
-    if AADW
-      VASA = VASAnew;
-    end
+    %if AADW
+    %  VASA = VASAnew;
+    %end
     if(tempevl)
        VUTU = VUTUnew;
        VNTN = VNTNnew;
        VSTS = VSTSnew;
        VDTD = VDTDnew;
-       if AADW
-         VATA = VATAnew;
-       end
+       %if AADW
+       %  VATA = VATAnew;
+       %end
     end
     VU = LU*Bwidth*H_pyc;
     VN = LN*Bwidth*Htopo;
     VS = LS*Bwidth*Htopo;
     VD = LU*Bwidth*H_deep;
     if AADW
-      VA = LU*Bwidth*H_AADW;
+      VS = VS + LU*Bwidth*H_AADW;
+      %VA = LU*Bwidth*H_AADW;
     end
     SU=VUSU/VU;
     SN=VNSN/VN;
     SS=VSSS/VS;
     SD=VDSD/VD;
-    if AADW
-      SA = VASA/VA;
-    end
+    %if AADW
+    %  SA = VASA/VA;
+    %end
     if(tempevl)
        TU = VUTU/VU;
        TN = VNTN/VN;
        TS = VSTS/VS;
        TD = VDTD/VD;
-       if AADW
-         TA = VATA/VA;
-       end
+       %if AADW
+       %  TA = VATA/VA;
+       %end
     end
     % time series
     time=time+deltat;        
@@ -266,7 +277,9 @@ for ind=1:(yearlength*yearinsec/deltat)
           FNd=FNFW;
         end
         FNFW=FNd+(1*FNFW_cap)*mod(iind,100)/99;
-        if iind>500 & iind < 550
+        if iind>500 & iind < 650
+          FNFW = 1.0*FNFW_cap;
+        elseif iind>1600 & iind < 1750
           FNFW = 1.0*FNFW_cap;
         else
           FNFW = 0.0*FNFW_cap;
@@ -282,9 +295,12 @@ for ind=1:(yearlength*yearinsec/deltat)
       SNtime(iind) = SN;
       SStime(iind) = SS;
       SDtime(iind) = SD;
+      hAADWtime(iind) = H_AADW;
+      hPYCtime(iind) = H_pyc;
+      hDEEPtime(iind) = H_deep;
       if AADW
-        SAtime(iind) = SA;
-        TrA(iind) = phi_AADW;
+        %SAtime(iind) = SA;
+        %TrA(iind) = phi_AADW;
         TrI(iind) = phi_ITU;
       end
       drho(iind) = delta_rho;
@@ -295,9 +311,9 @@ for ind=1:(yearlength*yearinsec/deltat)
         TNtime(iind) = TN;
         TStime(iind) = TS;
         TDtime(iind) = TD;
-        if AADW
-          TAtime(iind) = TA;
-        end
+        %if AADW
+        %  TAtime(iind) = TA;
+        %end
       end
       iind = iind+1;
     end
@@ -331,4 +347,6 @@ else
 	plot(SNtime,'r','linewidth',2)
 	plot(SStime,'g','linewidth',2)
 end
+display('[phi_N phi_Up phi_GM1 phi_GM2 phi_ITU phi_Ek]')
+[phi_N phi_Up phi_GM1 phi_GM2 phi_ITU phi_Ek]*1e-6
 %save('initial.mat','SN','SU','SD','SS','TN','TU','TD','TS','H_pyc','VU','VN','VS','VD')
